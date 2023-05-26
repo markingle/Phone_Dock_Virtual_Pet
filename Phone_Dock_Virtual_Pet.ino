@@ -5,6 +5,7 @@
 // Convereter site is - https://www.online-utility.org/image/convert/to/XBM
 //#include "images.h"
 #include "phone_pet_characters_v1.h"
+#include "pet_sleep_visual.h"
 #include "egg.h"
 
 int LOCK_STATE_MONITOR = 19;
@@ -55,13 +56,19 @@ void phone_pet_characters() {
   display.drawXbm(0, 0, phone_pet_char_width, phone_pet_char_height, phone_pet_char_bits);
 }
 
+void pet_sleep_visual() {
+  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
+  // on how to create xbm files
+  display.drawXbm(15, 15, pet_sleep_visual_width, pet_sleep_visual_height, pet_sleep_visual_bits);
+}
+
 void egg() {
   // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
   // on how to create xbm files
   display.drawXbm(0, 0, egg_width, egg_height, egg_bits);
 }
 
-Graphic graphics[] = {phone_pet_characters, egg};
+Graphic graphics[] = {phone_pet_characters, pet_sleep_visual, egg};
 int demoLength = (sizeof(graphics) / sizeof(Graphic));
 
 boolean timer_state = false;
@@ -82,16 +89,16 @@ long previousMillis_log = 0;
 
 void IRAM_ATTR onoffTimer(){
 
-  switch (dockstate){
+  switch (cycleCompleted){
      
     case 0:
-      TSCC_Seconds++; // Time Since Completed Cycle
-      //Serial.println("TSCC is " + String(Undocked_seconds) + " seconds");
+      Current_Cycle_Seconds++;
+      //Serial.println("Docked timer is " + String(Docked_seconds) + " seconds");
       break;
 
     case 1:
-      Current_Cycle_Seconds++;
-      //Serial.println("Docked timer is " + String(Docked_seconds) + " seconds");
+      TSCC_Seconds++; // Time Since Completed Cycle
+      //Serial.println("TSCC is " + String(Undocked_seconds) + " seconds");
       break;
   }
 }
@@ -123,10 +130,9 @@ void checkDockState(){
       HIGH_State_Set = false;
       dockstate = 0;
       //graphics[mainImageState]();
-      display.clear();
-      //graphics[6]();
-      //stop_LED();
-      //displayScreen();
+      stop_LED();
+      digitalWrite(CYCLE_COMPLETE_LED_INDICATOR, LOW);
+      displayScreen();
   }
 }
 
@@ -157,12 +163,24 @@ void setProgressBar(int percentage){
 
 void displayScreen(){
     display.clear();
+    display.display();
     //display.drawString(10, 25, String(cycleCount));
-    setProgressBar(percentState);
+    if (cycleCompleted = 0) setProgressBar(percentState);
     graphics[mainImageState]();
     //graphics[cycleImageState]();
     display.display();
 }
+
+void checkCycleCount(){  //Cyclecount drives the transition of main image states
+
+      if (cycleCompleted == 1) {
+        if ((cycleCount > 0) || (cycleCount <= 2)) {
+          mainImageState = 2;
+        }
+      }
+}
+        
+      
 
 void cycleTime_ProgressBar(){
 
@@ -215,18 +233,15 @@ void cycleTime_ProgressBar(){
       cycleCount = cycleCount + 1;
       cycleCompleted = 1;
       dockstate = 0; 
-      Current_Cycle_Seconds = 1;
+      Current_Cycle_Seconds = Current_Cycle_Seconds + 1;
       //percentState = 0;
       //Docked_seconds = 0;
       //Undocked_seconds = 0;
       blink_LED();
-      delay(1000);
-      display.clear();
-      display.display();
       //display.drawString(20, 25, String(cycleCount));
       //display.drawString(10, 25, "999");
-      //Serial.print("Main Image state = ");
-      //Serial.print(mainImageState);
+      Serial.print("Main Image state = ");
+      Serial.print(mainImageState);
       //Serial.print("  Cycle = ");
       //Serial.println(cycleCount);
       //checkCycleCount();
@@ -255,6 +270,16 @@ void blink_LED() {
   //Serial.println("LED Started");
 }
 
+void stop_LED(){
+  if (LED_timer != NULL) {
+    timerAlarmDisable(LED_timer);
+    timerDetachInterrupt(LED_timer);
+    timerEnd(LED_timer);
+    LED_timer = NULL;
+    Serial.println("LED Stopped");
+  }
+}
+
 void setup() {
   pinMode(LOCK_STATE_MONITOR, INPUT);
   pinMode(CYCLE_COMPLETE_LED_INDICATOR, OUTPUT);
@@ -278,7 +303,8 @@ void setup() {
 void loop() {
   checkDockState();
   cycleTime_ProgressBar();
-//checkCycleCount();
+  checkCycleCount();
+
   
   unsigned long currentMillis_log = millis();
   if(currentMillis_log - previousMillis_log > log_interval)
