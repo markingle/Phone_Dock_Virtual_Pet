@@ -7,6 +7,9 @@
 #include "phone_pet_characters_v1.h"
 #include "pet_sleep_visual.h"
 #include "egg.h"
+#include "stage_1.h"
+#include "stage_2.h"
+#include "stage_3.h"
 
 int LOCK_STATE_MONITOR = 19;
 int CYCLE_COMPLETE_LED_INDICATOR = 15;  //Cycle complete indictor - GREEN LED
@@ -68,7 +71,25 @@ void egg() {
   display.drawXbm(0, 0, egg_width, egg_height, egg_bits);
 }
 
-Graphic graphics[] = {phone_pet_characters, pet_sleep_visual, egg};
+void stage_1() {
+  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
+  // on how to create xbm files
+  display.drawXbm(0, 0, stage_1_width, stage_1_height, stage_1_bits);
+}
+
+void stage_2() {
+  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
+  // on how to create xbm files
+  display.drawXbm(0, 0, stage_2_width, stage_2_height, stage_2_bits);
+}
+
+void stage_3() {
+  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
+  // on how to create xbm files
+  display.drawXbm(0, 0, stage_3_width, stage_3_height, stage_3_bits);
+}
+
+Graphic graphics[] = {phone_pet_characters, pet_sleep_visual, egg, stage_1, stage_2, stage_3};
 int demoLength = (sizeof(graphics) / sizeof(Graphic));
 
 boolean timer_state = false;
@@ -116,8 +137,12 @@ void checkDockState(){
         startTimer();
         timer_state = true;
       }
-      HIGH_State_Set = true;
-      dockstate = 1;
+      cycleCompleted = 0;
+      percentState = 0;
+      dockstate = 1; 
+      Current_Cycle_Seconds = 1;
+      mainImageState = 1;  //Sets main image back to sleeping when phone is docked
+      HIGH_State_Set = true;  //Forces this logic to run once
       digitalWrite(CYCLE_COMPLETE_LED_INDICATOR, HIGH);
       displayScreen();
   }
@@ -126,10 +151,15 @@ void checkDockState(){
       //Turns timer off
       //timer_state = false;
       //timer_started = true;
-
+      if (cycleCompleted == 0) {
+        percentState = 0;
+        cycleCompleted = 1;
+      }
       HIGH_State_Set = false;
       dockstate = 0;
       //graphics[mainImageState]();
+      Serial.print("Main Image state = ");
+      Serial.println(mainImageState);
       stop_LED();
       digitalWrite(CYCLE_COMPLETE_LED_INDICATOR, LOW);
       displayScreen();
@@ -165,7 +195,7 @@ void displayScreen(){
     display.clear();
     display.display();
     //display.drawString(10, 25, String(cycleCount));
-    if (cycleCompleted = 0) setProgressBar(percentState);
+    if (cycleCompleted == 0) setProgressBar(percentState);
     graphics[mainImageState]();
     //graphics[cycleImageState]();
     display.display();
@@ -174,9 +204,24 @@ void displayScreen(){
 void checkCycleCount(){  //Cyclecount drives the transition of main image states
 
       if (cycleCompleted == 1) {
-        if ((cycleCount > 0) || (cycleCount <= 2)) {
+        if ((cycleCount > 0) && (cycleCount <= 2)) {
           mainImageState = 2;
         }
+
+        if ((cycleCount > 2) && (cycleCount <= 12)) {
+          mainImageState = 3;
+        }
+
+        if ((cycleCount > 12) && (cycleCount <= 22)) {
+          mainImageState = 4;
+        }
+
+        if (cycleCount > 22) {
+          mainImageState = 5;
+        }
+
+        display.drawString(15, 25, String(cycleCount));
+        display.display();
       }
 }
         
@@ -233,20 +278,26 @@ void cycleTime_ProgressBar(){
       cycleCount = cycleCount + 1;
       cycleCompleted = 1;
       dockstate = 0; 
-      Current_Cycle_Seconds = Current_Cycle_Seconds + 1;
+      Current_Cycle_Seconds = Current_Cycle_Seconds + 1;  //+1 forces the switch to default
       //percentState = 0;
       //Docked_seconds = 0;
       //Undocked_seconds = 0;
       blink_LED();
       //display.drawString(20, 25, String(cycleCount));
       //display.drawString(10, 25, "999");
+      Serial.println("");
       Serial.print("Main Image state = ");
-      Serial.print(mainImageState);
+      Serial.println(mainImageState);
+      Serial.println("");
+      Serial.print("cycleCount = ");
+      Serial.println(cycleCount);
+      Serial.println("");
       //Serial.print("  Cycle = ");
       //Serial.println(cycleCount);
       //checkCycleCount();
       //displayScreen();
       break;
+      
     default:
       break;
   }
