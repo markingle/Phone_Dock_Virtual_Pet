@@ -10,6 +10,10 @@
 #include "stage_1.h"
 #include "stage_2.h"
 #include "stage_3.h"
+#include "smiley.h"
+#include "swirl.h"
+#include "skull.h"
+#include "gravestone_v2.h"
 
 int LOCK_STATE_MONITOR = 19;
 int CYCLE_COMPLETE_LED_INDICATOR = 15;  //Cycle complete indictor - GREEN LED
@@ -19,7 +23,7 @@ typedef void (*Graphic)(void);
 String percentage = "10";
 int percentState = 0;
 int mainImageState = 1; //default is egg image at startup
-int cycleImageState = 5;
+int cycleImageState = 6;
 
 
 // Initialize the OLED display using Arduino Wire:
@@ -89,17 +93,42 @@ void stage_3() {
   display.drawXbm(0, 0, stage_3_width, stage_3_height, stage_3_bits);
 }
 
-Graphic graphics[] = {phone_pet_characters, pet_sleep_visual, egg, stage_1, stage_2, stage_3};
+void smiley() {
+  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
+  // on how to create xbm files
+  display.drawXbm(0, 0, smiley_width, smiley_height, smiley_bits);
+}
+
+void swirl() {
+  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
+  // on how to create xbm files
+  display.drawXbm(0, 0, swirl_width, swirl_height, swirl_bits);
+}
+
+void skull() {
+  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
+  // on how to create xbm files
+  display.drawXbm(0, 0, skull_width, skull_height, skull_bits);
+}
+
+void gravestone_v2() {
+  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
+  // on how to create xbm files
+  display.drawXbm(0, 0, gravestone_v2_width, gravestone_v2_height, gravestone_v2_bits);
+}
+
+Graphic graphics[] = {phone_pet_characters, pet_sleep_visual, egg, stage_1, stage_2, stage_3, smiley, swirl, skull, gravestone_v2};
 int demoLength = (sizeof(graphics) / sizeof(Graphic));
 
 boolean timer_state = false;
 boolean timer_started = false;
 boolean HIGH_State_Set = false;
+boolean cycleImageDisplayed = false;
 
 int TimerState = 1;
 
 int dockstate = 2;
-int cycleCount = 0;
+int cycleCount = 22;
 int cycleCompleted = 0;
 int counter = 1;
 
@@ -141,8 +170,11 @@ void checkDockState(){
       percentState = 0;
       dockstate = 1; 
       Current_Cycle_Seconds = 1;
+      TSCC_Seconds = 0; //Reset the time since complete cycle after phone is returned to dock
       mainImageState = 1;  //Sets main image back to sleeping when phone is docked
       HIGH_State_Set = true;  //Forces this logic to run once
+      cycleImageDisplayed = false;
+      cycleImageState = 6; //set back to default after phone is docked again
       digitalWrite(CYCLE_COMPLETE_LED_INDICATOR, HIGH);
       displayScreen();
   }
@@ -162,7 +194,7 @@ void checkDockState(){
       Serial.println(mainImageState);
       stop_LED();
       digitalWrite(CYCLE_COMPLETE_LED_INDICATOR, LOW);
-      displayScreen();
+      displayCycleImage();
   }
 }
 
@@ -181,6 +213,21 @@ void startTimer(){
   //display.display();
 }
 
+void stopTimer(){
+  if (dock_timer != NULL) {
+    timerAlarmDisable(dock_timer);
+    timerDetachInterrupt(dock_timer);
+    timerEnd(dock_timer);
+    dock_timer = NULL;
+    //timer_state = false;
+    //timer_started = false;
+    //HIGH_State_Set = false;
+    dockstate = 2;
+    Serial.println("Timer Stopped");
+  }
+}
+
+
 void setProgressBar(int percentage){
   int x = percentage;
   progress = (x) % 110;
@@ -194,11 +241,27 @@ void setProgressBar(int percentage){
 void displayScreen(){
     display.clear();
     display.display();
-    //display.drawString(10, 25, String(cycleCount));
+    display.drawString(10, 25, String(cycleCount));
     if (cycleCompleted == 0) setProgressBar(percentState);
     graphics[mainImageState]();
-    //graphics[cycleImageState]();
+    /*if (dockstate == 0) {
+      graphics[cycleImageState]();
+      display.display();
+      graphics[mainImageState]();
+      display.display();
+    } else {
+      graphics[mainImageState]();
+    }*/
     display.display();
+}
+
+void displayCycleImage(){
+  display.clear();
+  graphics[cycleImageState]();
+  display.display();
+  graphics[mainImageState]();
+  display.display();
+  //cycleImageDisplayed = true;
 }
 
 void checkCycleCount(){  //Cyclecount drives the transition of main image states
@@ -220,12 +283,58 @@ void checkCycleCount(){  //Cyclecount drives the transition of main image states
           mainImageState = 5;
         }
 
-        display.drawString(15, 25, String(cycleCount));
-        display.display();
+        //display.drawString(15, 25, String(cycleCount));
+        //display.display();
       }
 }
-        
-      
+
+void checkCycleCompleted(){
+  
+  if ((TSCC_Seconds == 23) || (TSCC_Seconds == 47)){
+    cycleImageDisplayed = false;
+  }
+
+  if ((cycleCompleted == 1) || (dockstate == 0)) {
+    if ((TSCC_Seconds == 12) && (cycleImageDisplayed == false))
+        {
+          cycleImageState = 7; //swirl is shown
+          Serial.println("Smiley is running...  :(");
+          cycleImageDisplayed = true;
+          displayCycleImage();
+        }
+    if ((TSCC_Seconds == 24) && (cycleImageDisplayed == false))
+        {
+          cycleImageState = 8; //skull is shown
+          Serial.println("Swirl is running...  :(");
+          cycleImageDisplayed = true;
+          displayCycleImage();
+        } 
+    if ((TSCC_Seconds == 48) && (cycleImageDisplayed == false))
+        {
+          cycleImageState = 9; //grave is shown
+          display.clear();
+          graphics[cycleImageState]();
+          display.display();
+          stopTimer();
+        }
+    //displayScreen();
+  }
+}
+
+/*void checkCycleCompleted(){
+
+  switch (TSCC_Seconds){
+     
+    case 12:
+      cycleImageState = 7; //smiley is shown
+      Serial.println("Smiley is running...  :(");
+
+    case 24:
+      cycleImageState = 8; //swril is shown
+      Serial.println("Swril ran...  :(");
+    break;
+  }
+}*/
 
 void cycleTime_ProgressBar(){
 
@@ -277,13 +386,14 @@ void cycleTime_ProgressBar(){
       setProgressBar(percentState);
       cycleCount = cycleCount + 1;
       cycleCompleted = 1;
-      dockstate = 0; 
+      //dockstate = 0;
+      cycleImageState = 6;  //Cycle image resets on a completed cycle
       Current_Cycle_Seconds = Current_Cycle_Seconds + 1;  //+1 forces the switch to default
       //percentState = 0;
       //Docked_seconds = 0;
       //Undocked_seconds = 0;
       blink_LED();
-      //display.drawString(20, 25, String(cycleCount));
+      display.drawString(20, 25, String(cycleCount));
       //display.drawString(10, 25, "999");
       Serial.println("");
       Serial.print("Main Image state = ");
@@ -295,7 +405,8 @@ void cycleTime_ProgressBar(){
       //Serial.print("  Cycle = ");
       //Serial.println(cycleCount);
       //checkCycleCount();
-      //displayScreen();
+      displayScreen();
+      displayCycleImage();
       break;
       
     default:
@@ -345,7 +456,8 @@ void setup() {
 
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_24);
-  graphics[1]();  //Set default image for intial boot....states saved to EEPROM will dictate display images
+  mainImageState = 1;
+  graphics[mainImageState]();  //Set default image for intial boot....states saved to EEPROM will dictate display images
   display.display();
   //startTimer();
 
@@ -355,8 +467,8 @@ void loop() {
   checkDockState();
   cycleTime_ProgressBar();
   checkCycleCount();
-
-  
+  checkCycleCompleted();
+  //if (dockstate == 0 ) displayCycleImage();
   unsigned long currentMillis_log = millis();
   if(currentMillis_log - previousMillis_log > log_interval)
     {
