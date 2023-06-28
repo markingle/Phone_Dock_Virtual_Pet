@@ -128,7 +128,7 @@ boolean cycleImageDisplayed = false;
 int TimerState = 1;
 
 int dockstate = 2;
-int cycleCount = 22;
+int cycleCount = 0;
 int cycleCompleted = 0;
 int counter = 1;
 
@@ -183,9 +183,16 @@ void checkDockState(){
       //Turns timer off
       //timer_state = false;
       //timer_started = true;
+
+      if ((timer_state == false) && (timer_started == false)) {
+        startTimer();
+        Serial.println("Timer Start Back up!!");
+        timer_state = true;
+      }
+      
       if (cycleCompleted == 0) {
         percentState = 0;
-        cycleCompleted = 1;
+        cycleCompleted = 1;// Not sure this is correct here...
       }
       HIGH_State_Set = false;
       dockstate = 0;
@@ -298,14 +305,14 @@ void checkCycleCompleted(){
     if ((TSCC_Seconds == 12) && (cycleImageDisplayed == false))
         {
           cycleImageState = 7; //swirl is shown
-          Serial.println("Smiley is running...  :(");
+          Serial.println("Swirl is running...  :(");
           cycleImageDisplayed = true;
           displayCycleImage();
         }
     if ((TSCC_Seconds == 24) && (cycleImageDisplayed == false))
         {
           cycleImageState = 8; //skull is shown
-          Serial.println("Swirl is running...  :(");
+          Serial.println("Skull is running...  :(");
           cycleImageDisplayed = true;
           displayCycleImage();
         } 
@@ -407,6 +414,9 @@ void cycleTime_ProgressBar(){
       //checkCycleCount();
       displayScreen();
       displayCycleImage();
+      timer_state = false;
+      timer_started = false;
+      stopTimer();
       break;
       
     default:
