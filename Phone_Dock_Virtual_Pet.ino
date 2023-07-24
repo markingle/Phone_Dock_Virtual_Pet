@@ -1,5 +1,6 @@
 #include <Wire.h>               // Only needed for Arduino 1.6.5 and earlier
 #include "SSD1306Wire.h"        // legacy: #include "SSD1306.h"
+#include <Preferences.h>
 
 // Optionally include custom images
 // Convereter site is - https://www.online-utility.org/image/convert/to/XBM
@@ -15,6 +16,8 @@
 #include "skull.h"
 #include "gravestone_v2.h"
 
+const char * StateKeys = "VirualPetStates";
+
 int LOCK_STATE_MONITOR = 19;
 int CYCLE_COMPLETE_LED_INDICATOR = 15;  //Cycle complete indictor - GREEN LED
 
@@ -24,6 +27,8 @@ String percentage = "10";
 int percentState = 0;
 int mainImageState = 1; //default is egg image at startup
 int cycleImageState = 6;
+
+Preferences pref;
 
 
 // Initialize the OLED display using Arduino Wire:
@@ -125,17 +130,14 @@ boolean timer_started = false;
 boolean HIGH_State_Set = false;
 boolean cycleImageDisplayed = false;
 
-int TimerState = 1;
-
 int dockstate = 2;
 int cycleCount = 0;
 int cycleCompleted = 0;
-int counter = 1;
 
 int progress = 0;
 
-long log_interval = 1000;
-long previousMillis_log = 0;
+long log_interval = 1000;  //DO NOT RECORD TO EEPROM
+long previousMillis_log = 0;  //DO NOT RECORD TO EEPROM
 
 void IRAM_ATTR onoffTimer(){
 
@@ -169,7 +171,7 @@ void checkDockState(){
       cycleCompleted = 0;
       percentState = 0;
       dockstate = 1; 
-      Current_Cycle_Seconds = 1;
+      Current_Cycle_Seconds = 1; 
       TSCC_Seconds = 0; //Reset the time since complete cycle after phone is returned to dock
       mainImageState = 1;  //Sets main image back to sleeping when phone is docked
       HIGH_State_Set = true;  //Forces this logic to run once
@@ -196,7 +198,6 @@ void checkDockState(){
       }
       HIGH_State_Set = false;
       dockstate = 0;
-      //graphics[mainImageState]();
       Serial.print("Main Image state = ");
       Serial.println(mainImageState);
       stop_LED();
@@ -214,10 +215,6 @@ void startTimer(){
   timer_started = true;
   //HIGH_State_Set = true;
   Serial.println("Timer Started");
-  //setProgressBar(percentState); //need logic to set progress bar state
-  //mainImageState = 3; //pet_sleep_visual
-  //graphics[mainImageState]();
-  //display.display();
 }
 
 void stopTimer(){
@@ -226,9 +223,6 @@ void stopTimer(){
     timerDetachInterrupt(dock_timer);
     timerEnd(dock_timer);
     dock_timer = NULL;
-    //timer_state = false;
-    //timer_started = false;
-    //HIGH_State_Set = false;
     dockstate = 2;
     Serial.println("Timer Stopped");
   }
@@ -238,8 +232,6 @@ void stopTimer(){
 void setProgressBar(int percentage){
   int x = percentage;
   progress = (x) % 110;
-  //Serial.print("Progress = ");
-  //Serial.println(progress);
   display.drawProgressBar(20, 5, 100, 10, progress);  //x,y,width,thickness,progress
   display.display();
   percentage = 0;
@@ -251,14 +243,6 @@ void displayScreen(){
     display.drawString(10, 25, String(cycleCount));
     if (cycleCompleted == 0) setProgressBar(percentState);
     graphics[mainImageState]();
-    /*if (dockstate == 0) {
-      graphics[cycleImageState]();
-      display.display();
-      graphics[mainImageState]();
-      display.display();
-    } else {
-      graphics[mainImageState]();
-    }*/
     display.display();
 }
 
@@ -268,7 +252,6 @@ void displayCycleImage(){
   display.display();
   graphics[mainImageState]();
   display.display();
-  //cycleImageDisplayed = true;
 }
 
 void checkCycleCount(){  //Cyclecount drives the transition of main image states
@@ -288,10 +271,9 @@ void checkCycleCount(){  //Cyclecount drives the transition of main image states
 
         if (cycleCount > 22) {
           mainImageState = 5;
+          cycleCount = 0;
+          pref.putInt("cycleCount", cycleCount);
         }
-
-        //display.drawString(15, 25, String(cycleCount));
-        //display.display();
       }
 }
 
@@ -323,25 +305,11 @@ void checkCycleCompleted(){
           graphics[cycleImageState]();
           display.display();
           stopTimer();
+          cycleCount = 0;
+          pref.putInt("cycleCount", cycleCount);
         }
-    //displayScreen();
   }
 }
-
-/*void checkCycleCompleted(){
-
-  switch (TSCC_Seconds){
-     
-    case 12:
-      cycleImageState = 7; //smiley is shown
-      Serial.println("Smiley is running...  :(");
-
-    case 24:
-      cycleImageState = 8; //swril is shown
-      Serial.println("Swril ran...  :(");
-    break;
-  }
-}*/
 
 void cycleTime_ProgressBar(){
 
@@ -384,21 +352,14 @@ void cycleTime_ProgressBar(){
       percentState = 80;
       setProgressBar(percentState);
       break;
-    //case 45:
-    //  percentState = 90;
-    //  setProgressBar(percentState);
-    //  break;
     case 45:
       percentState = 100;
       setProgressBar(percentState);
       cycleCount = cycleCount + 1;
+      pref.putInt("cycleCount", cycleCount);
       cycleCompleted = 1;
-      //dockstate = 0;
       cycleImageState = 6;  //Cycle image resets on a completed cycle
       Current_Cycle_Seconds = Current_Cycle_Seconds + 1;  //+1 forces the switch to default
-      //percentState = 0;
-      //Docked_seconds = 0;
-      //Undocked_seconds = 0;
       blink_LED();
       display.drawString(20, 25, String(cycleCount));
       //display.drawString(10, 25, "999");
@@ -452,15 +413,37 @@ void stop_LED(){
   }
 }
 
+void Get_Key_States(){
+  progress = pref.getUInt("progress",0);
+}
+
+
 void setup() {
+  Serial.begin(115200);
+
+  pref.begin(StateKeys, false);
+
+  //pref.clear();
+
   pinMode(LOCK_STATE_MONITOR, INPUT);
   pinMode(CYCLE_COMPLETE_LED_INDICATOR, OUTPUT);
 
   digitalWrite(LOCK_STATE_MONITOR, HIGH);
   digitalWrite(CYCLE_COMPLETE_LED_INDICATOR, LOW);
  
-  Serial.begin(115200);
   
+
+  
+  if (pref.isKey("cycleCount"))
+  {
+    cycleCount = pref.getInt("cycleCount",0);
+    Serial.print("Key found.....");
+    Serial.println(cycleCount);
+
+  } else {
+    Serial.println("Key not found");
+  }
+
   // Initialising the UI will init the display too.
   display.init();
 
@@ -469,8 +452,6 @@ void setup() {
   mainImageState = 1;
   graphics[mainImageState]();  //Set default image for intial boot....states saved to EEPROM will dictate display images
   display.display();
-  //startTimer();
-
 }
 
 void loop() {
@@ -485,6 +466,7 @@ void loop() {
       previousMillis_log = currentMillis_log;   
       Serial.println("TSCC is " + String(TSCC_Seconds) + " seconds");
       Serial.println(" CCS is " + String(Current_Cycle_Seconds) + " seconds");
+      pref.putInt("CCS", Current_Cycle_Seconds);
     }
 }
 
