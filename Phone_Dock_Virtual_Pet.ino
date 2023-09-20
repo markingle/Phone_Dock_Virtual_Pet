@@ -320,43 +320,43 @@ void cycleTime_ProgressBar(){
   if (cycleCompleted == 1) return;
 
   switch (Current_Cycle_Seconds) {
-    case 1:
+    case 3240:
       percentState = 0;
       setProgressBar(percentState);
       break;
-    case 5:
+    case 6480:
       percentState = 10;
       setProgressBar(percentState);
       break;
-    case 10: 
+    case 9720: 
       percentState = 20;
       setProgressBar(percentState);
       break;
-    case 15:
+    case 12960:
       percentState = 30;
       setProgressBar(percentState);
       break;
-    case 20:
+    case 16200:
       percentState = 40;
       setProgressBar(percentState);
       break;
-    case 25:
+    case 19440:
       percentState = 50;
       setProgressBar(percentState);
       break;
-    case 30: 
+    case 22680: 
       percentState = 60;
       setProgressBar(percentState);
       break;
-    case 35:
+    case 25920:
       percentState = 70;
       setProgressBar(percentState);
       break;
-    case 40:
+    case 29160:
       percentState = 80;
       setProgressBar(percentState);
       break;
-    case 45:
+    case 32400:
       percentState = 100;
       setProgressBar(percentState);
       cycleCount = cycleCount + 1;
