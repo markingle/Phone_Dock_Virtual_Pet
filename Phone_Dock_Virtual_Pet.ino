@@ -28,6 +28,10 @@ int percentState = 0;
 int mainImageState = 1; //default is egg image at startup
 int cycleImageState = 6;
 
+int undockedTime_L1 = 43200; // AKA 12 hours
+int undockedTime_L2 = 86400; // AKA 24 hours
+int undockedTime_L3 = 172800; // AKA 48 hours
+
 Preferences pref;
 
 
@@ -279,26 +283,26 @@ void checkCycleCount(){  //Cyclecount drives the transition of main image states
 
 void checkCycleCompleted(){
   
-  if ((TSCC_Seconds == 23) || (TSCC_Seconds == 47)){
+  if ((TSCC_Seconds == 43199) || (TSCC_Seconds == 172799)){  //23 and 47 seconds were used in the testing
     cycleImageDisplayed = false;
   }
 
   if ((cycleCompleted == 1) || (dockstate == 0)) {
-    if ((TSCC_Seconds == 12) && (cycleImageDisplayed == false))
+    if ((TSCC_Seconds == undockedTime_L1) && (cycleImageDisplayed == false))
         {
           cycleImageState = 7; //swirl is shown
           Serial.println("Swirl is running...  :(");
           cycleImageDisplayed = true;
           displayCycleImage();
         }
-    if ((TSCC_Seconds == 24) && (cycleImageDisplayed == false))
+    if ((TSCC_Seconds == undockedTime_L2) && (cycleImageDisplayed == false))
         {
           cycleImageState = 8; //skull is shown
           Serial.println("Skull is running...  :(");
           cycleImageDisplayed = true;
           displayCycleImage();
         } 
-    if ((TSCC_Seconds == 48) && (cycleImageDisplayed == false))
+    if ((TSCC_Seconds == undockedTime_L3) && (cycleImageDisplayed == false))
         {
           cycleImageState = 9; //grave is shown
           display.clear();
@@ -449,7 +453,7 @@ void setup() {
 
   display.flipScreenVertically();
   display.setFont(ArialMT_Plain_24);
-  mainImageState = 1;
+  mainImageState = 2;
   graphics[mainImageState]();  //Set default image for intial boot....states saved to EEPROM will dictate display images
   display.display();
 }
