@@ -26,11 +26,12 @@ typedef void (*Graphic)(void);
 String percentage = "10";
 int percentState = 0;
 int mainImageState = 1; //default is egg image at startup
+int storemainImageState = 1;
 int cycleImageState = 6;
 
-int undockedTime_L1 = 43200; // AKA 12 hours
-int undockedTime_L2 = 86400; // AKA 24 hours
-int undockedTime_L3 = 172800; // AKA 48 hours
+int undockedTime_L1 = 12; // AKA 12 hours 43200
+int undockedTime_L2 = 24; // AKA 24 hours 86400
+int undockedTime_L3 = 48; // AKA 48 hours 172800
 
 Preferences pref;
 
@@ -202,6 +203,9 @@ void checkDockState(){
       }
       HIGH_State_Set = false;
       dockstate = 0;
+      if (storemainImageState >= 2){
+        mainImageState = storemainImageState;
+      }
       Serial.print("Main Image state = ");
       Serial.println(mainImageState);
       stop_LED();
@@ -263,14 +267,17 @@ void checkCycleCount(){  //Cyclecount drives the transition of main image states
       if (cycleCompleted == 1) {
         if ((cycleCount > 0) && (cycleCount <= 2)) {
           mainImageState = 2;
+          storemainImageState = 2;
         }
 
         if ((cycleCount > 2) && (cycleCount <= 12)) {
           mainImageState = 3;
+          storemainImageState = 3;          
         }
 
         if ((cycleCount > 12) && (cycleCount <= 22)) {
           mainImageState = 4;
+          storemainImageState = 4;  
         }
 
         if (cycleCount > 22) {
@@ -283,7 +290,7 @@ void checkCycleCount(){  //Cyclecount drives the transition of main image states
 
 void checkCycleCompleted(){
   
-  if ((TSCC_Seconds == 43199) || (TSCC_Seconds == 172799)){  //23 and 47 seconds were used in the testing
+  if ((TSCC_Seconds == 23) || (TSCC_Seconds == 47)){  //23 and 47 seconds were used in the testing 43199/172799
     cycleImageDisplayed = false;
   }
 
@@ -320,43 +327,43 @@ void cycleTime_ProgressBar(){
   if (cycleCompleted == 1) return;
 
   switch (Current_Cycle_Seconds) {
-    case 3240:
+    case 1:  //3240
       percentState = 0;
       setProgressBar(percentState);
       break;
-    case 6480:
+    case 5: //6480
       percentState = 10;
       setProgressBar(percentState);
       break;
-    case 9720: 
+    case 10:  //9720
       percentState = 20;
       setProgressBar(percentState);
       break;
-    case 12960:
+    case 15:  //12960
       percentState = 30;
       setProgressBar(percentState);
       break;
-    case 16200:
+    case 20:  //16200
       percentState = 40;
       setProgressBar(percentState);
       break;
-    case 19440:
+    case 25:  //19440
       percentState = 50;
       setProgressBar(percentState);
       break;
-    case 22680: 
+    case 30:  //22680
       percentState = 60;
       setProgressBar(percentState);
       break;
-    case 25920:
+    case 35:  //25920
       percentState = 70;
       setProgressBar(percentState);
       break;
-    case 29160:
+    case 40: //29160
       percentState = 80;
       setProgressBar(percentState);
       break;
-    case 32400:
+    case 45:  //32400
       percentState = 100;
       setProgressBar(percentState);
       cycleCount = cycleCount + 1;
