@@ -177,11 +177,11 @@ void checkDockState(){
       percentState = 0;
       dockstate = 1; 
       Current_Cycle_Seconds = 1; 
-      TSCC_Seconds = 0; //Reset the time since complete cycle after phone is returned to dock
+      //TSCC_Seconds = 0; //Reset the time since complete cycle after phone is returned to dock
       mainImageState = 1;  //Sets main image back to sleeping when phone is docked
       HIGH_State_Set = true;  //Forces this logic to run once
       cycleImageDisplayed = false;
-      cycleImageState = 6; //set back to default after phone is docked again
+      //cycleImageState = 6; //set back to default after phone is docked again
       digitalWrite(CYCLE_COMPLETE_LED_INDICATOR, HIGH);
       displayScreen();
   }
@@ -365,6 +365,8 @@ void cycleTime_ProgressBar(){
       break;
     case 45:  //32400
       percentState = 100;
+      TSCC_Seconds = 0;
+      cycleImageState = 6;
       setProgressBar(percentState);
       cycleCount = cycleCount + 1;
       pref.putInt("cycleCount", cycleCount);
