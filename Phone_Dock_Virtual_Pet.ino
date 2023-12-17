@@ -1,9 +1,24 @@
-#include <Wire.h>               // Only needed for Arduino 1.6.5 and earlier
-#include "SSD1306Wire.h"        // legacy: #include "SSD1306.h"
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1325.h>
 #include <Preferences.h>
+
+
+// If using software SPI, define CLK and MOSI
+#define OLED_CLK 18 //13
+#define OLED_MOSI 23 //11
+
+// These are neede for both hardware & softare SPI
+#define OLED_CS 5 //10
+#define OLED_RESET 22 //9
+#define OLED_DC 19 //8
+
+// this is software SPI, slower but any pins
+Adafruit_SSD1325 display(OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 
 // Optionally include custom images
 // Convereter site is - https://www.online-utility.org/image/convert/to/XBM
+// SSD1325 convereter used is at - https://javl.github.io/image2cpp/
 //#include "images.h"
 #include "phone_pet_characters_v1.h"
 #include "pet_sleep_visual.h"
@@ -18,7 +33,7 @@
 
 const char * StateKeys = "VirualPetStates";
 
-int LOCK_STATE_MONITOR = 19;
+int LOCK_STATE_MONITOR = 25;
 int CYCLE_COMPLETE_LED_INDICATOR = 15;  //Cycle complete indictor - GREEN LED
 
 typedef void (*Graphic)(void);
@@ -35,28 +50,6 @@ int undockedTime_L3 = 48; // AKA 48 hours 172800
 
 Preferences pref;
 
-
-// Initialize the OLED display using Arduino Wire:
-SSD1306Wire display(0x3c, 26, 27);   // ADDRESS, SDA, SCL  -  SDA and SCL usually populate automatically based on your board's pins_arduino.h e.g. https://github.com/esp8266/Arduino/blob/master/variants/nodemcu/pins_arduino.h
-// SSD1306Wire display(0x3c, D3, D5);  // ADDRESS, SDA, SCL  -  If not, they can be specified manually.
-// SSD1306Wire display(0x3c, SDA, SCL, GEOMETRY_128_32);  // ADDRESS, SDA, SCL, OLEDDISPLAY_GEOMETRY  -  Extra param required for 128x32 displays.
-// SH1106Wire display(0x3c, SDA, SCL);     // ADDRESS, SDA, SCL
-
-// Initialize the OLED display using brzo_i2c:
-// SSD1306Brzo display(0x3c, D3, D5);  // ADDRESS, SDA, SCL
-// or
-// SH1106Brzo display(0x3c, D3, D5);   // ADDRESS, SDA, SCL
-
-// Initialize the OLED display using SPI:
-// D5 -> CLK
-// D7 -> MOSI (DOUT)
-// D0 -> RES
-// D2 -> DC
-// D8 -> CS
-// SSD1306Spi display(D0, D2, D8);  // RES, DC, CS
-// or
-// SH1106Spi display(D0, D2);       // RES, DC
-
 /* create a hardware timer for timing dock states */
 hw_timer_t * dock_timer = NULL;
 int Current_Cycle_Seconds, TSCC_Seconds, TimerCount;
@@ -67,64 +60,54 @@ hw_timer_t * LED_timer = NULL;
 /* LED state */
 volatile byte state = LOW;
 
-void phone_pet_characters() {
-  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
-  // on how to create xbm files
-  display.drawXbm(0, 0, phone_pet_char_width, phone_pet_char_height, phone_pet_char_bits);
-}
 
 void pet_sleep_visual() {
-  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
-  // on how to create xbm files
-  display.drawXbm(15, 15, pet_sleep_visual_width, pet_sleep_visual_height, pet_sleep_visual_bits);
+  display.drawBitmap(0, 0, pet_sleep_visual_bits, 128, 64, 1);
+}
+
+void phone_pet_characters() {
+  //display.drawXbm(0, 0, phone_pet_char_width, phone_pet_char_height, phone_pet_char_bits);
+  display.drawBitmap(0, 0, phone_pet_char_bits, 128, 64, 1);
 }
 
 void egg() {
-  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
-  // on how to create xbm files
-  display.drawXbm(0, 0, egg_width, egg_height, egg_bits);
+  //display.drawXbm(0, 0, egg_width, egg_height, egg_bits);
+  display.drawBitmap(0, 0, egg_bits, 128, 64, 1);
 }
 
 void stage_1() {
-  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
-  // on how to create xbm files
-  display.drawXbm(0, 0, stage_1_width, stage_1_height, stage_1_bits);
+  //display.drawXbm(0, 0, stage_1_width, stage_1_height, stage_1_bits);
+  display.drawBitmap(0, 0, stage_1_bits, 128, 64, 1);
 }
 
 void stage_2() {
-  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
-  // on how to create xbm files
-  display.drawXbm(0, 0, stage_2_width, stage_2_height, stage_2_bits);
+  //display.drawXbm(0, 0, stage_2_width, stage_2_height, stage_2_bits);
+  display.drawBitmap(0, 0, stage_2_bits, 128, 64, 1);
 }
 
 void stage_3() {
-  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
-  // on how to create xbm files
-  display.drawXbm(0, 0, stage_3_width, stage_3_height, stage_3_bits);
+  //display.drawXbm(0, 0, stage_3_width, stage_3_height, stage_3_bits);
+  display.drawBitmap(0, 0, stage_3_bits, 128, 64, 1);
 }
 
 void smiley() {
-  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
-  // on how to create xbm files
-  display.drawXbm(0, 0, smiley_width, smiley_height, smiley_bits);
+  //display.drawXbm(0, 0, smiley_width, smiley_height, smiley_bits);
+  display.drawBitmap(0, 0, smiley_bits, 128, 64, 1);
 }
 
 void swirl() {
-  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
-  // on how to create xbm files
-  display.drawXbm(0, 0, swirl_width, swirl_height, swirl_bits);
+  //display.drawXbm(0, 0, swirl_width, swirl_height, swirl_bits);
+  display.drawBitmap(0, 0, swirl_bits, 128, 64, 1);
 }
 
 void skull() {
-  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
-  // on how to create xbm files
-  display.drawXbm(0, 0, skull_width, skull_height, skull_bits);
+  //display.drawXbm(0, 0, skull_width, skull_height, skull_bits);
+  display.drawBitmap(0, 0, skull_bits, 128, 64, 1);
 }
 
 void gravestone_v2() {
-  // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
-  // on how to create xbm files
-  display.drawXbm(0, 0, gravestone_v2_width, gravestone_v2_height, gravestone_v2_bits);
+  //display.drawXbm(0, 0, gravestone_v2_width, gravestone_v2_height, gravestone_v2_bits);
+  display.drawBitmap(0, 0, gravestone_v2_bits, 128, 64, 1);
 }
 
 Graphic graphics[] = {phone_pet_characters, pet_sleep_visual, egg, stage_1, stage_2, stage_3, smiley, swirl, skull, gravestone_v2};
@@ -240,22 +223,26 @@ void stopTimer(){
 void setProgressBar(int percentage){
   int x = percentage;
   progress = (x) % 110;
-  display.drawProgressBar(20, 5, 100, 10, progress);  //x,y,width,thickness,progress
+  display.drawProgressBar(0, 0, 127, 10, progress);  //x,y,width,thickness,progress
   display.display();
   percentage = 0;
 }
 
 void displayScreen(){
-    display.clear();
+    display.clearDisplay();
+    display.setCursor(5, 25);
+    display.setTextColor(WHITE);
+    display.setTextSize(2);
+    display.print(String(cycleCount));
     display.display();
-    display.drawString(10, 25, String(cycleCount));
+    //display.drawString(10, 25, String(cycleCount));
     if (cycleCompleted == 0) setProgressBar(percentState);
     graphics[mainImageState]();
     display.display();
 }
 
 void displayCycleImage(){
-  display.clear();
+  display.clearDisplay();
   graphics[cycleImageState]();
   display.display();
   graphics[mainImageState]();
@@ -312,7 +299,7 @@ void checkCycleCompleted(){
     if ((TSCC_Seconds == undockedTime_L3) && (cycleImageDisplayed == false))
         {
           cycleImageState = 9; //grave is shown
-          display.clear();
+          display.clearDisplay();
           graphics[cycleImageState]();
           display.display();
           stopTimer();
@@ -374,8 +361,9 @@ void cycleTime_ProgressBar(){
       cycleImageState = 6;  //Cycle image resets on a completed cycle
       Current_Cycle_Seconds = Current_Cycle_Seconds + 1;  //+1 forces the switch to default
       blink_LED();
-      display.drawString(20, 25, String(cycleCount));
-      //display.drawString(10, 25, "999");
+
+      //display.drawString(20, 25, String(cycleCount));
+
       Serial.println("");
       Serial.print("Main Image state = ");
       Serial.println(mainImageState);
@@ -436,7 +424,7 @@ void setup() {
 
   pref.begin(StateKeys, false);
 
-  //pref.clear();
+  pref.clear();
 
   pinMode(LOCK_STATE_MONITOR, INPUT);
   pinMode(CYCLE_COMPLETE_LED_INDICATOR, OUTPUT);
@@ -458,12 +446,16 @@ void setup() {
   }
 
   // Initialising the UI will init the display too.
-  display.init();
+  display.begin();
 
-  display.flipScreenVertically();
-  display.setFont(ArialMT_Plain_24);
-  mainImageState = 2;
-  graphics[mainImageState]();  //Set default image for intial boot....states saved to EEPROM will dictate display images
+  //display.flipScreenVertically();
+  //display.setFont(ArialMT_Plain_24);
+  mainImageState = 1;
+  //graphics[mainImageState]();  //Set default image for intial boot....states saved to EEPROM will dictate display images
+  //display.display();
+  display.clearDisplay();
+  //display.drawBitmap(0, 0, pet_sleep_visual_bits, 128, 64, 1);
+  graphics[mainImageState]();
   display.display();
 }
 
